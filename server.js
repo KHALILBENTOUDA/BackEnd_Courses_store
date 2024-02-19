@@ -1,49 +1,44 @@
-const http=require('http')
+require('dotenv').config()
+const express = require('express');
+const courseRoutes=require('./routes/CourseRoutes')
+const userRoutes=require('./routes/UserRoutes')
+const mongoose=require('mongoose');
+const bodyParser = require('body-parser');
+const HttpStatusText=require('./utils/HttpStatusText')
+const AppError=require('./utils/AppError')
+const cors=require('cors');
+const path = require('path');
+const app=express()
 
-const server = http.createServer((req,res)=>{
-    res.setHeader('context-type','text-html')
+const url= process.env.MONGO_URL
+const port=process.env.PORT
 
+app.use(express.json())
+app.use(cors())
 
-    // if(req.url==='/'){
-    //     res.statusCode=200;
-    //     res.write('wolcome in home')
-    // }else if(req.url==='/contact'){
-    //     res.statusCode=200;
-    //     res.write('contact')
-    // }else if(req.url==='/about'){
-    //     res.statusCode=200;
-    //     res.write('about')
-    // }else{
-    //     res.statusCode=404;
-    //     res.write(`<p>404 page not fount </p>`)
-    // }
-    
+app.use('/uploads',express.static(path.join(__dirname,'uploads')))
+app.use('/api/course',courseRoutes)
+app.use('/api/user',userRoutes)
 
-    switch(req.url){
-        case '/':
-            res.statusCode=200;
-            res.write('wolcome in home')
-            break;
-
-            case '/contact':
-                res.statusCode=200;
-                res.write('contact')
-                break;
-                
-                case '/about':
-                    res.statusCode=200;
-                    res.write('about')
-                    break;
-
-                    default:
-                        res.statusCode=404;
-                        res.write(`<p>404 page not fount </p>`)
-    }
-    res.end()
-
+mongoose.connect(url).then(()=>{
+    console.log('database is connected secsessfuly!')
 })
 
-server.listen(5000,()=>console.log('server is runing...'))
+// globall error for not found
+app.all('*',(req,res,next)=>{
+    next(new AppError('This ressource is not available',HttpStatusText.ERORR,404))
+})
 
+// global error handler
 
+app.use((error,req,res,next)=>{
+    res.status(error.statusCode || 500).json({
+        status:error.status,
+        message:error.message,
+        statusCode:error.statusCode,
+    })
+})
 
+app.listen(port,()=>{
+    console.log('servre runing in prort',port)
+})
